@@ -1,3 +1,10 @@
+"""Tokenizes an AppleSoft BASIC program into memory representation.
+
+See http://www.txbobsc.com/scsc/scdocumentor/D52C.html for original source.
+
+TODO: add tests
+"""
+
 import sys
 
 TOKENS = {}
