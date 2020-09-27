@@ -30,10 +30,11 @@ def tokenize_program(lines):
 
     addr = 0x801
     for line in lines:
-        line = line.rstrip("\n\r")
-        if not line:
+        if not line.strip():
+            # Skip lines that entirely consist of other whitespace,
+            # though we want to keep this for actual program lines
             continue
-        linenum, tokenized = tokenize_line(line)
+        linenum, tokenized = tokenize_line(line.rstrip("\n\r"))
         tokenized = list(tokenized)
         addr += len(tokenized) + 4
         # Starting address of next program line (or EOF)
