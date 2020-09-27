@@ -13,7 +13,7 @@ for i, t in enumerate([
     "END", "FOR", "NEXT", "DATA", "INPUT", "DEL", "DIM", "READ", "GR", "TEXT",
     "PR#", "IN#", "CALL", "PLOT", "HLIN", "VLIN", "HGR2", "HGR", "HCOLOR=",
     "HPLOT", "DRAW", "XDRAW", "HTAB", "HOME", "ROT=", "SCALE=", "SHLOAD",
-    "TRACE", "NOTRACE", "NORMAL", "INVERSE", "FLASH", "COLOR", "POP", "VTAB",
+    "TRACE", "NOTRACE", "NORMAL", "INVERSE", "FLASH", "COLOR=", "POP", "VTAB",
     "HIMEM:", "LOMEM:", "ONERR", "RESUME", "RECALL", "STORE", "SPEED=", "LET",
     "GOTO", "RUN", "IF", "RESTORE", "&", "GOSUB", "RETURN", "REM", "STOP", "ON",
     "WAIT", "LOAD", "SAVE", "DEF", "POKE", "PRINT", "CONT", "LIST", "CLEAR",
@@ -28,7 +28,6 @@ for i, t in enumerate([
 def tokenize_program(lines):
     """Tokenizes a program consisting of multiple lines."""
 
-    yield 0x00
     addr = 0x801
     for line in lines:
         linenum, tokenized = tokenize_line(line.rstrip("\n"))
@@ -137,7 +136,7 @@ def read_token(line: str, idx: int):
 
     if not token_match:
         # Didn't find one, next character must be a literal
-        return [ord(line[idx])], lookahead_idx + 1
+        return [ord(line[idx].upper())], idx + 1
 
     # need to read one more char to disambiguate "AT/ATN/A TO"
     if token == "AT":
@@ -147,13 +146,14 @@ def read_token(line: str, idx: int):
             return [ord("A"), TOKENS["TO"]], lookahead_idx + 2
     return [TOKENS[token]], lookahead_idx + 1
 
-
 def main(argv):
-    sys.stdout.write("0800: ")
-    with open(argv[1], "r") as f:
-        for c in tokenize_program(f.readlines()):
-            sys.stdout.write("%02x " % c)
-    print()
+    if len(argv) < 2:
+        print("Usage: %s <input> <output>", sys.stderr)
+        sys.exit(1)
+    with open(argv[1], "r") as input:
+        with open(argv[2], "wb") as output:
+            for c in tokenize_program(input.readlines()):
+                output.write(bytes([c]))
 
 
 if __name__ == "__main__":
