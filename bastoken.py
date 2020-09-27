@@ -30,7 +30,10 @@ def tokenize_program(lines):
 
     addr = 0x801
     for line in lines:
-        linenum, tokenized = tokenize_line(line.rstrip("\n"))
+        line = line.rstrip("\n\r")
+        if not line:
+            continue
+        linenum, tokenized = tokenize_line(line)
         tokenized = list(tokenized)
         addr += len(tokenized) + 4
         # Starting address of next program line (or EOF)
