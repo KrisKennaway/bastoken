@@ -25,7 +25,7 @@ for i, t in enumerate([
     TOKENS[t] = 0x80 + i
 
 
-def tokenize_program(lines):
+def tokenize_program(lines, upper):
     """Tokenizes a program consisting of multiple lines."""
 
     addr = 0x801
@@ -34,7 +34,7 @@ def tokenize_program(lines):
             # Skip lines that entirely consist of other whitespace,
             # though we want to keep this for actual program lines
             continue
-        linenum, tokenized = tokenize_line(line.rstrip("\n\r"))
+        linenum, tokenized = tokenize_line(line.rstrip("\n\r"), upper)
         tokenized = list(tokenized)
         addr += len(tokenized) + 4
         # Starting address of next program line (or EOF)
@@ -50,7 +50,7 @@ def tokenize_program(lines):
     yield 0x00
 
 
-def tokenize_line(line: str):
+def tokenize_line(line: str, upper):
     """Tokenizes a program line consisting of line number and statement body."""
 
     line_num_str = ""
@@ -63,10 +63,10 @@ def tokenize_line(line: str):
     if line_num > 65535:
         raise ValueError(line_num)
 
-    return int(line_num), tokenize_statements(line[idx:])
+    return int(line_num), tokenize_statements(line[idx:], upper)
 
 
-def tokenize_statements(line: str):
+def tokenize_statements(line: str, upper):
     """Emits sequence of tokens for a line statement body."""
 
     data_mode = False  # Are we inside a DATA statement?
@@ -105,7 +105,7 @@ def tokenize_statements(line: str):
             char_idx += 1
             continue
 
-        tokens, char_idx = read_token(line, char_idx)
+        tokens, char_idx = read_token(line, char_idx, upper)
         for token in tokens:
             if token == TOKENS["DATA"]:
                 data_mode = True
@@ -115,7 +115,7 @@ def tokenize_statements(line: str):
     yield 0x00
 
 
-def read_token(line: str, idx: int):
+def read_token(line: str, idx: int, upper):
     """Reads forward from idx and emits next matching token(s)."""
     for token in TOKENS:
         lookahead_idx = idx
@@ -140,7 +140,7 @@ def read_token(line: str, idx: int):
 
     if not token_match:
         # Didn't find one, next character must be a literal
-        return [ord(line[idx].upper())], idx + 1
+        return [ord(line[idx] if upper == None else line[idx].upper())], idx + 1
 
     # need to read one more char to disambiguate "AT/ATN/A TO"
     if token == "AT":
@@ -152,11 +152,11 @@ def read_token(line: str, idx: int):
 
 def main(argv):
     if len(argv) < 2:
-        print("Usage: %s <input> <output>", sys.stderr)
+        print("Usage: %s <input> <output> [upper]", sys.stderr)
         sys.exit(1)
     with open(argv[1], "r") as input:
         with open(argv[2], "wb") as output:
-            for c in tokenize_program(input.readlines()):
+            for c in tokenize_program(input.readlines(), argv[3] if len(argv) == 4 else None):
                 output.write(bytes([c]))
 
 
