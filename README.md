@@ -14,7 +14,8 @@ positional arguments:
 optional arguments:
 * `-l`, `--allow_lower`: Whether to accept lower-case input without canonicalizing to upper-case. The original
   (unenhanced) //e did not canonicalize program input, meaning that lower-case would be accepted (but not
-  recognized as valid tokens, i.e. would not usually produce a valid program).
+  recognized as valid tokens, i.e. would not usually produce a valid program).  The enhanced //e (and later
+  models) canonicalize input except within string literals, REMarks and DATA statements.
 
 The output file can be written back to a disk image, e.g. using [AppleCommander](https://applecommander.github.io/):
 

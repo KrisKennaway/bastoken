@@ -172,7 +172,9 @@ def main():
              "upper-case.  The original (unenhanced) //e did not canonicalize "
              "program input, meaning that lower-case would be accepted (but "
              "not recognized as valid tokens, i.e. would not usually produce "
-             "a valid program).")
+             "a valid program).  The enhanced //e (and later models) "
+             "canonicalize input except within string literals, REMarks and "
+             "DATA statements.")
     args = parser.parse_args()
     tokenizer = Tokenizer(args.allow_lower)
     with open(args.input, "r") as input:
