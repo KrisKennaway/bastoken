@@ -5,6 +5,7 @@ See http://www.txbobsc.com/scsc/scdocumentor/D52C.html for original source.
 TODO: add tests
 """
 
+import argparse
 import sys
 
 TOKENS = {}
@@ -25,140 +26,157 @@ for i, t in enumerate([
     TOKENS[t] = 0x80 + i
 
 
-def tokenize_program(lines):
-    """Tokenizes a program consisting of multiple lines."""
+class Tokenizer:
+    def __init__(self, allow_lower=False):
+        self.allow_lower = allow_lower
 
-    addr = 0x801
-    for line in lines:
-        if not line.strip():
-            # Skip lines that entirely consist of other whitespace,
-            # though we want to keep this for actual program lines
-            continue
-        linenum, tokenized = tokenize_line(line.rstrip("\n\r"))
-        tokenized = list(tokenized)
-        addr += len(tokenized) + 4
-        # Starting address of next program line (or EOF)
-        yield addr % 256
-        yield int(addr / 256)
-        # Line number
-        yield linenum % 256
-        yield int(linenum / 256)
-        # Statement body
-        yield from tokenized
-    # No more lines
-    yield 0x00
-    yield 0x00
+    def tokenize_program(self, lines):
+        """Tokenizes a program consisting of multiple lines."""
 
+        addr = 0x801
+        for line in lines:
+            if not line.strip():
+                # Skip lines that entirely consist of other whitespace,
+                # though we want to keep this for actual program lines
+                continue
+            linenum, tokenized = self.tokenize_line(line.rstrip("\n\r"))
+            tokenized = list(tokenized)
+            addr += len(tokenized) + 4
+            # Starting address of next program line (or EOF)
+            yield addr % 256
+            yield int(addr / 256)
+            # Line number
+            yield linenum % 256
+            yield int(linenum / 256)
+            # Statement body
+            yield from tokenized
+        # No more lines
+        yield 0x00
+        yield 0x00
 
-def tokenize_line(line: str):
-    """Tokenizes a program line consisting of line number and statement body."""
+    def tokenize_line(self, line: str):
+        """Tokenizes a program line consisting of line number and statement body."""
 
-    line_num_str = ""
-    for idx, char in enumerate(line):
-        if char >= '0' and char <= '9':
-            line_num_str += char
-        else:
-            break
-    line_num = int(line_num_str)
-    if line_num > 65535:
-        raise ValueError(line_num)
+        line_num_str = ""
+        for idx, char in enumerate(line):
+            if char >= '0' and char <= '9':
+                line_num_str += char
+            else:
+                break
+        line_num = int(line_num_str)
+        if line_num > 65535:
+            raise ValueError(line_num)
 
-    return int(line_num), tokenize_statements(line[idx:])
+        return int(line_num), self.tokenize_statements(line[idx:])
 
+    def tokenize_statements(self, line: str):
+        """Emits sequence of tokens for a line statement body."""
 
-def tokenize_statements(line: str):
-    """Emits sequence of tokens for a line statement body."""
+        data_mode = False  # Are we inside a DATA statement?
+        rem_mode = False  # Are we inside a REM statement?
+        quote_mode = False  # Are we inside a quoted string?
 
-    data_mode = False  # Are we inside a DATA statement?
-    rem_mode = False  # Are we inside a REM statement?
-    quote_mode = False  # Are we inside a quoted string?
+        char_idx = 0
+        while char_idx < len(line):
+            char = line[char_idx]
 
-    char_idx = 0
-    while char_idx < len(line):
-        char = line[char_idx]
-
-        if char == " " and not (data_mode or rem_mode or quote_mode):
-            char_idx += 1
-            continue
-
-        if char == '"':
-            quote_mode = not quote_mode
-
-        if char == ':':
-            data_mode = False
-            yield ord(char)
-            char_idx += 1
-            continue
-
-        if quote_mode or rem_mode or data_mode:
-            yield ord(char)
-            char_idx += 1
-            continue
-
-        if char == '?':
-            yield TOKENS["PRINT"]
-            char_idx += 1
-            continue
-
-        if '0' <= char <= ';':
-            yield ord(char)
-            char_idx += 1
-            continue
-
-        tokens, char_idx = read_token(line, char_idx)
-        for token in tokens:
-            if token == TOKENS["DATA"]:
-                data_mode = True
-            elif token == TOKENS["REM"]:
-                rem_mode = True
-            yield token
-    yield 0x00
-
-
-def read_token(line: str, idx: int):
-    """Reads forward from idx and emits next matching token(s)."""
-    for token in TOKENS:
-        lookahead_idx = idx
-        token_idx = 0
-        token_match = False
-        while lookahead_idx < len(line) and token_idx < len(token):
-            char = line[lookahead_idx]
-            if char == " ":
-                lookahead_idx += 1
+            if char == " " and not (data_mode or rem_mode or quote_mode):
+                char_idx += 1
                 continue
 
-            if char.upper() != token[token_idx]:
+            if char == '"':
+                quote_mode = not quote_mode
+
+            if char == ':':
+                data_mode = False
+                yield ord(char)
+                char_idx += 1
+                continue
+
+            if quote_mode or rem_mode or data_mode:
+                yield ord(char)
+                char_idx += 1
+                continue
+
+            if char == '?':
+                yield TOKENS["PRINT"]
+                char_idx += 1
+                continue
+
+            if '0' <= char <= ';':
+                yield ord(char)
+                char_idx += 1
+                continue
+
+            tokens, char_idx = self.read_token(line, char_idx)
+            for token in tokens:
+                if token == TOKENS["DATA"]:
+                    data_mode = True
+                elif token == TOKENS["REM"]:
+                    rem_mode = True
+                yield token
+        yield 0x00
+
+    def read_token(self, line: str, idx: int):
+        """Reads forward from idx and emits next matching token(s)."""
+        for token in TOKENS:
+            lookahead_idx = idx
+            token_idx = 0
+            token_match = False
+            while lookahead_idx < len(line) and token_idx < len(token):
+                char = self.canonicalize(line[lookahead_idx])
+                if char == " ":
+                    lookahead_idx += 1
+                    continue
+
+                if char != token[token_idx]:
+                    break
+                if token_idx == len(token) - 1:
+                    token_match = True
+                    break
+
+                lookahead_idx += 1
+                token_idx += 1
+            if token_match:
                 break
-            if token_idx == len(token) - 1:
-                token_match = True
-                break
 
-            lookahead_idx += 1
-            token_idx += 1
-        if token_match:
-            break
+        if not token_match:
+            # Didn't find one, next character must be a literal
+            return [ord(self.canonicalize(line[idx]))], idx + 1
 
-    if not token_match:
-        # Didn't find one, next character must be a literal
-        return [ord(line[idx].upper())], idx + 1
+        # need to read one more char to disambiguate "AT/ATN/A TO"
+        if token == "AT":
+            if self.canonicalize(line[lookahead_idx + 1]) == "N":
+                return [TOKENS["ATN"]], lookahead_idx + 2
+            elif self.canonicalize(line[lookahead_idx + 1]) == "O":
+                return [ord("A"), TOKENS["TO"]], lookahead_idx + 2
+        return [TOKENS[token]], lookahead_idx + 1
 
-    # need to read one more char to disambiguate "AT/ATN/A TO"
-    if token == "AT":
-        if line[lookahead_idx + 1] == "N":
-            return [TOKENS["ATN"]], lookahead_idx + 2
-        elif line[lookahead_idx + 1] == "O":
-            return [ord("A"), TOKENS["TO"]], lookahead_idx + 2
-    return [TOKENS[token]], lookahead_idx + 1
+    def canonicalize(self, char):
+        return char if self.allow_lower else char.upper()
 
-def main(argv):
-    if len(argv) < 2:
-        print("Usage: %s <input> <output>", sys.stderr)
-        sys.exit(1)
-    with open(argv[1], "r") as input:
-        with open(argv[2], "wb") as output:
-            for c in tokenize_program(input.readlines()):
+
+def main():
+    parser = argparse.ArgumentParser(
+        description="Tokenizes an AppleSoft BASIC program")
+    parser.add_argument(
+        "input", type=str, help="The input text file to tokenize")
+    parser.add_argument(
+        "output", type=str,
+        help="The output file to write the tokenized program")
+    parser.add_argument(
+        "-l", "--allow_lower", action="store_true",
+        help="Whether to accept lower-case input without canonicalizing to "
+             "upper-case.  The original (unenhanced) //e did not canonicalize "
+             "program input, meaning that lower-case would be accepted (but "
+             "not recognized as valid tokens, i.e. would not usually produce "
+             "a valid program).")
+    args = parser.parse_args()
+    tokenizer = Tokenizer(args.allow_lower)
+    with open(args.input, "r") as input:
+        with open(args.output, "wb") as output:
+            for c in tokenizer.tokenize_program(input.readlines()):
                 output.write(bytes([c]))
 
-
 if __name__ == "__main__":
-    main(sys.argv)
+    main()
