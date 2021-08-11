@@ -1,13 +1,20 @@
 # bastoken
-Tokenizer for AppleSoft BASIC
+
+Tokenizes an AppleSoft BASIC program
 
 ## Usage
 
-`python bastoken.py <input> <output>`
+`usage: bastoken.py [-h] [-l] input output`
 
-where
-* `<input>` is a text file containing the AppleSoft BASIC program
-* `<output>` will contain the tokenized program, suitable for running on an Apple II
+positional arguments:
+
+* `input` is a text file containing the AppleSoft BASIC program
+* `output` will contain the tokenized program, suitable for running on an Apple II
+
+optional arguments:
+* `-l`, `--allow_lower`: Whether to accept lower-case input without canonicalizing to upper-case. The original
+  (unenhanced) //e did not canonicalize program input, meaning that lower-case would be accepted (but not
+  recognized as valid tokens, i.e. would not usually produce a valid program).
 
 The output file can be written back to a disk image, e.g. using [AppleCommander](https://applecommander.github.io/):
 

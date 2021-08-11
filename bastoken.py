@@ -160,10 +160,12 @@ def main():
     parser = argparse.ArgumentParser(
         description="Tokenizes an AppleSoft BASIC program")
     parser.add_argument(
-        "input", type=str, help="The input text file to tokenize")
+        "input", type=str,
+        help="A text file containing the AppleSoft BASIC program")
     parser.add_argument(
         "output", type=str,
-        help="The output file to write the tokenized program")
+        help="Will contain the tokenized program, suitable for running on an "
+             "Apple II")
     parser.add_argument(
         "-l", "--allow_lower", action="store_true",
         help="Whether to accept lower-case input without canonicalizing to "
