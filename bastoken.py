@@ -59,7 +59,7 @@ class Tokenizer:
 
         line_num_str = ""
         for idx, char in enumerate(line):
-            if char >= '0' and char <= '9':
+            if '0' <= char <= '9':
                 line_num_str += char
             else:
                 break
