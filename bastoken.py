@@ -145,7 +145,7 @@ class Tokenizer:
             return [ord(self.canonicalize(line[idx]))], idx + 1
 
         # need to read one more char to disambiguate "AT/ATN/A TO"
-        if token == "AT":
+        if token == "AT" and lookahead_idx < (len(line) - 1):
             if self.canonicalize(line[lookahead_idx + 1]) == "N":
                 return [TOKENS["ATN"]], lookahead_idx + 2
             elif self.canonicalize(line[lookahead_idx + 1]) == "O":
