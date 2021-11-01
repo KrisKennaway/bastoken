@@ -27,8 +27,8 @@ for i, t in enumerate([
 
 
 class Tokenizer:
-    def __init__(self, allow_lower=False):
-        self.allow_lower = allow_lower
+    def __init__(self, canonicalize_case=False):
+        self.canonicalize_case = canonicalize_case
 
     def tokenize_program(self, lines):
         """Tokenizes a program consisting of multiple lines."""
@@ -153,7 +153,7 @@ class Tokenizer:
         return [TOKENS[token]], lookahead_idx + 1
 
     def canonicalize(self, char):
-        return char if self.allow_lower else char.upper()
+        return char.upper() if self.canonicalize_case else char
 
 
 def main():
@@ -167,16 +167,17 @@ def main():
         help="Will contain the tokenized program, suitable for running on an "
              "Apple II")
     parser.add_argument(
-        "-l", "--allow_lower", action="store_true",
-        help="Whether to accept lower-case input without canonicalizing to "
-             "upper-case.  The original (unenhanced) //e did not canonicalize "
-             "program input, meaning that lower-case would be accepted (but "
-             "not recognized as valid tokens, i.e. would not usually produce "
-             "a valid program).  The enhanced //e (and later models) "
-             "canonicalize input except within string literals, REMarks and "
-             "DATA statements.")
+        "-c", "--canonicalize_case", action="store_false",
+        help="(Default: False) Whether to accept AppleSoft tokens in "
+             "lower-case (e.g. 'home').  Enabling this matches behaviour of an "
+             "enhanced //e (and later).  The original (unenhanced) //e did not "
+             "canonicalize input case, meaning that lower-case input would not "
+             "be recognized as valid tokens (i.e. would not usually produce a "
+             "valid program).  The enhanced //e (and later models) "
+             "canonicalizes input case except within string literals, REMarks "
+             "and DATA statements.")
     args = parser.parse_args()
-    tokenizer = Tokenizer(args.allow_lower)
+    tokenizer = Tokenizer(args.canonicalize_case)
     with open(args.input, "r") as data_input:
         with open(args.output, "wb") as data_output:
             for c in tokenizer.tokenize_program(data_input.readlines()):
