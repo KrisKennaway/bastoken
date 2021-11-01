@@ -177,10 +177,11 @@ def main():
              "DATA statements.")
     args = parser.parse_args()
     tokenizer = Tokenizer(args.allow_lower)
-    with open(args.input, "r") as input:
-        with open(args.output, "wb") as output:
-            for c in tokenizer.tokenize_program(input.readlines()):
-                output.write(bytes([c]))
+    with open(args.input, "r") as data_input:
+        with open(args.output, "wb") as data_output:
+            for c in tokenizer.tokenize_program(data_input.readlines()):
+                data_output.write(bytes([c]))
+
 
 if __name__ == "__main__":
     main()
